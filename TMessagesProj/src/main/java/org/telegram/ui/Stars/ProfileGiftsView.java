@@ -1,9 +1,5 @@
 package org.telegram.ui.Stars;
 
-import static org.telegram.messenger.AndroidUtilities.dp;
-import static org.telegram.messenger.AndroidUtilities.lerp;
-import static org.telegram.ui.Stars.StarsController.findAttribute;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
@@ -13,50 +9,65 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.view.MotionEvent;
 import android.view.View;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.view.animation.Interpolator;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
-import org.telegram.messenger.Utilities;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_stars;
-import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.SimpleTextView;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimatedEmojiDrawable;
 import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.ButtonBounce;
 import org.telegram.ui.Components.CubicBezierInterpolator;
-import org.telegram.ui.ProfileActivity;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+
+import androidx.annotation.NonNull;
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+
+import static org.telegram.messenger.AndroidUtilities.dp;
+import static org.telegram.messenger.AndroidUtilities.lerp;
+import static org.telegram.messenger.AndroidUtilities.remapRange;
+import static org.telegram.ui.Stars.StarsController.findAttribute;
 
 public class ProfileGiftsView extends View implements NotificationCenter.NotificationCenterDelegate {
 
     private final int currentAccount;
     private final long dialogId;
     private final View avatarContainer;
-    private final ProfileActivity.AvatarImageView avatarImage;
+    private SimpleTextView nameTextView;
+    // nameTextView has incorrect width until firstLayout pass so use measured width instead
+    private float nameTextViewMeasuredWidth;
     private final Theme.ResourcesProvider resourcesProvider;
 
-    public ProfileGiftsView(Context context, int currentAccount, long dialogId, @NonNull View avatarContainer, ProfileActivity.AvatarImageView avatarImage, Theme.ResourcesProvider resourcesProvider) {
+    public ProfileGiftsView(Context context, int currentAccount, long dialogId,
+                            @NonNull View avatarContainer,
+                            Theme.ResourcesProvider resourcesProvider) {
         super(context);
 
         this.currentAccount = currentAccount;
         this.dialogId = dialogId;
 
         this.avatarContainer = avatarContainer;
-        this.avatarImage = avatarImage;
 
         this.resourcesProvider = resourcesProvider;
+    }
 
+    public void setNameTextView(SimpleTextView nameTextView) {
+        this.nameTextView = nameTextView;
+    }
+
+    public void setNameTextViewMeasuredWidth(float nameTextViewMeasuredWidth) {
+        this.nameTextViewMeasuredWidth = nameTextViewMeasuredWidth;
     }
 
     private float expandProgress;
+
     public void setExpandProgress(float progress) {
         if (this.expandProgress != progress) {
             this.expandProgress = progress;
@@ -64,7 +75,17 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
         }
     }
 
+    private float collapseProgress;
+
+    public void setCollapseProgress(float progress) {
+        if (this.collapseProgress != progress) {
+            this.collapseProgress = progress;
+            invalidate();
+        }
+    }
+
     private float actionBarProgress;
+
     public void setActionBarActionMode(float progress) {
 //        if (Theme.isCurrentThemeDark()) {
 //            return;
@@ -101,6 +122,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
     }
 
     private float progressToInsets = 1f;
+
     public void setProgressToStoriesInsets(float progressToInsets) {
         if (this.progressToInsets == progressToInsets) {
             return;
@@ -188,11 +210,11 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
         }
 
         public void draw(
-            Canvas canvas,
-            float cx, float cy,
-            float ascale, float rotate,
-            float alpha,
-            float gradientAlpha
+                Canvas canvas,
+                float cx, float cy,
+                float ascale, float rotate,
+                float alpha,
+                float gradientAlpha
         ) {
             if (alpha <= 0.0f) return;
             final float gsz = dp(45);
@@ -207,7 +229,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
                 canvas.drawRect(-gsz / 2.0f, -gsz / 2.0f, gsz / 2.0f, gsz / 2.0f, gradientPaint);
             }
             if (emojiDrawable != null) {
-                final int sz = dp(24);
+                final int sz = dp(32);
                 emojiDrawable.setBounds(-sz / 2, -sz / 2, sz / 2, sz / 2);
                 emojiDrawable.setAlpha((int) (0xFF * alpha));
                 emojiDrawable.draw(canvas);
@@ -217,6 +239,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
     }
 
     private StarsController.GiftsList list;
+    private Interpolator interpolator = new FastOutLinearInInterpolator();
 
     public final ArrayList<Gift> oldGifts = new ArrayList<>();
     public final ArrayList<Gift> gifts = new ArrayList<>();
@@ -282,7 +305,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             if (oldGift != null) {
                 g.copy(oldGift);
             } else {
-                g.gradient = new RadialGradient(0, 0, dp(22.5f), new int[] { g.color, Theme.multAlpha(g.color, 0.0f) }, new float[] { 0, 1 }, Shader.TileMode.CLAMP);
+                g.gradient = new RadialGradient(0, 0, dp(22.5f), new int[]{g.color, Theme.multAlpha(g.color, 0.0f)}, new float[]{0, 1}, Shader.TileMode.CLAMP);
                 g.gradientPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 g.gradientPaint.setShader(g.gradient);
                 if (g.document != null) {
@@ -326,96 +349,162 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
 
         final float ax = avatarContainer.getX();
         final float ay = avatarContainer.getY();
-        final float aw = (avatarContainer.getWidth()) * avatarContainer.getScaleX();
-        final float ah = (avatarContainer.getHeight()) * avatarContainer.getScaleY();
+
+        final float scaleX = avatarContainer.getScaleX();
+        final float scaleY = avatarContainer.getScaleY();
+
+        final float pivotX = avatarContainer.getPivotX();
+        final float pivotY = avatarContainer.getPivotY();
+
+        final float aw = avatarContainer.getWidth();
+        final float ah = avatarContainer.getHeight();
+
+        final float scaledX = ax + (1 - scaleX) * pivotX;
+        final float scaledY = ay + (1 - scaleY) * pivotY;
+        final float acx = scaledX + aw * scaleX / 2f;
+        final float acy = scaledY + ah * scaleY / 2f;
+
+        final float awScaled = aw * scaleX;
+        final float ahScaled = ah * scaleY;
+
+        final float collapsedRadius = 0;
+        final float expandedRadius = Math.min(awScaled, ahScaled) / 2.0f + dp(24);
+        final float cacx = Math.min(acx, dp(48));
+        final float cx = getWidth() / 2.0f;
+
+        final float nameScaleY = nameTextView.getScaleY();
+        final float nameScaledY = nameTextView.getY() + (1 - nameScaleY) * nameTextView.getPivotY();
+
+        final float nameEnd = nameTextView.getX()
+                + nameTextViewMeasuredWidth
+                + nameTextView.getRightDrawableWidth()
+                - dp(4); // small negative offset to be closer to the text
+        final float nameCy = nameScaledY + nameTextView.getHeight() * nameScaleY / 2f;
 
         canvas.save();
         canvas.clipRect(0, 0, getWidth(), expandY);
 
-        final float acx = ax + aw / 2.0f;
-        final float cacx = Math.min(acx, dp(48));
-        final float acy = ay + ah / 2.0f;
-        final float ar = Math.min(aw, ah) / 2.0f + dp(6);
-        final float cx = getWidth() / 2.0f;
-
-        final float closedAlpha = Utilities.clamp01((float) (expandY - (AndroidUtilities.statusBarHeight + ActionBar.getCurrentActionBarHeight())) / dp(50));
-
         for (int i = 0; i < gifts.size(); ++i) {
             final Gift gift = gifts.get(i);
             final float alpha = gift.animatedFloat.set(1.0f);
-            final float scale = lerp(0.5f, 1.0f, alpha);
+            final float scale = lerp(0.5f, 1.0f, collapseProgress);
             final int index = i; // gifts.size() == maxCount ? i - 1 : i;
+            float angle;
+            float shiftX = 0;
+            float shiftY = 0;
             if (index == 0) {
-                gift.draw(
-                    canvas,
-                    (float) (acx + ar * Math.cos(-65 / 180.0f * Math.PI)),
-                    (float) (acy + ar * Math.sin(-65 / 180.0f * Math.PI)),
-                    scale, -65 + 90,
-                    alpha * (1.0f - expandProgress), lerp(0.9f, 0.25f, actionBarProgress)
-                );
+                gift.draw(canvas, nameEnd, nameCy, 1.0f, 0, 1.0f, 1.0f);
             } else if (index == 1) {
+                angle = -35;
+                final float delayed = remapRange(collapseProgress, 0.7f, 0.5f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(25), interpolated);
                 gift.draw(
-                    canvas,
-                    lerp(cacx + Math.min(getWidth() * .27f, dp(62)), cx, 0.5f * actionBarProgress), acy - dp(52),
-                    scale, -4.0f,
-                    alpha * alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             } else if (index == 2) {
+                angle = -5;
+                final float delayed = remapRange(collapseProgress, 0.6f, 0.3f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(45), interpolated);
                 gift.draw(
-                    canvas,
-                    lerp(cacx + Math.min(getWidth() * .46f, dp(105)), cx, 0.5f * actionBarProgress), acy - dp(72),
-                    scale, 8.0f,
-                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             } else if (index == 3) {
+                angle = 35;
+                final float delayed = remapRange(collapseProgress, 0.9f, 0.6f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(15), interpolated);
                 gift.draw(
-                    canvas,
-                    lerp(cacx + Math.min(getWidth() * .60f, dp(136)), cx, 0.5f * actionBarProgress), acy - dp(46),
-                    scale, 3.0f,
-                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             } else if (index == 4) {
+                angle = 145;
+                final float delayed = remapRange(collapseProgress, 0.7f, 0.5f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(-15), interpolated);
                 gift.draw(
-                    canvas,
-                    lerp(cacx + Math.min(getWidth() * .08f, dp(21.6f)), cx, 0.5f * actionBarProgress), acy - dp(82f),
-                    scale, -3.0f,
-                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             } else if (index == 5) {
+                angle = 180;
+                final float delayed = remapRange(collapseProgress, 0.6f, 0.3f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(-37), interpolated);
                 gift.draw(
-                    canvas,
-                    lerp(cacx + Math.min(getWidth() * .745f, dp(186)), cx, 0.5f * actionBarProgress), acy - dp(39),
-                    scale, 2.0f,
-                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             } else if (index == 6) {
+                angle = 215;
+                final float delayed = remapRange(collapseProgress, 0.9f, 0.6f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(-15), interpolated);
                 gift.draw(
-                    canvas,
-                    cacx + Math.min(getWidth() * .38f, dp(102)), expandY - dp(12),
-                    scale, 0,
-                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             } else if (index == 7) {
+                angle = 30;
+                final float delayed = remapRange(collapseProgress, 0.55f, 0.3f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(80), interpolated);
                 gift.draw(
-                    canvas,
-                    cacx + Math.min(getWidth() * .135f, dp(36)), expandY - dp(17.6f),
-                    scale, -5.0f,
-                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             } else if (index == 8) {
+                angle = 120;
+                final float delayed = remapRange(collapseProgress, 0.55f, 0.3f);
+                final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+                final float radius = AndroidUtilities.lerp(collapsedRadius, expandedRadius, interpolated);
+                shiftX = AndroidUtilities.lerp(0, dp(-100), interpolated);
                 gift.draw(
-                    canvas,
-                    cacx + Math.min(getWidth() * .76f, dp(178)), expandY - dp(21.66f),
-                    scale, 5.0f,
-                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
-                    1.0f
+                        canvas,
+                        (float) (acx + radius * Math.cos(angle / 180.0f * Math.PI)) + shiftX,
+                        (float) (acy + radius * Math.sin(angle / 180.0f * Math.PI)) + shiftY,
+                        scale, angle + 90,
+                        alpha * alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (interpolated),
+                        1.0f
                 );
             }
         }
@@ -432,6 +521,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
     }
 
     private Gift pressedGift;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         final Gift hit = getGiftUnder(event.getX(), event.getY());

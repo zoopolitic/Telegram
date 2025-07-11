@@ -489,10 +489,25 @@ public class ProfileStoriesView extends View implements NotificationCenter.Notif
         float avatarPullProgress = Utilities.clamp((avatarContainer.getScaleX() - 1f) / 0.4f, 1f, 0f);
         float insetMain = AndroidUtilities.lerp(AndroidUtilities.dpf2(4f), AndroidUtilities.dpf2(3.5f), avatarPullProgress);
         insetMain *= progressToInsets;
-        float ax = avatarContainer.getX() + insetMain * avatarContainer.getScaleX();
-        float ay = avatarContainer.getY() + insetMain * avatarContainer.getScaleY();
-        float aw = (avatarContainer.getWidth() - insetMain * 2) * avatarContainer.getScaleX();
-        float ah = (avatarContainer.getHeight() - insetMain * 2) * avatarContainer.getScaleY();
+
+        float scaleX = avatarContainer.getScaleX();
+        float scaleY = avatarContainer.getScaleY();
+        float pivotX = avatarContainer.getPivotX();
+        float pivotY = avatarContainer.getPivotY();
+
+        float rawX = avatarContainer.getX();
+        float rawY = avatarContainer.getY();
+        float width = avatarContainer.getWidth();
+        float height = avatarContainer.getHeight();
+
+        float scaledX = rawX + (1 - scaleX) * pivotX;
+        float scaledY = rawY + (1 - scaleY) * pivotY;
+
+        float ax = scaledX + insetMain * scaleX;
+        float ay = scaledY + insetMain * scaleY;
+        float aw = (width - 2 * insetMain) * scaleX;
+        float ah = (height - 2 * insetMain) * scaleY;
+
         rect1.set(ax, ay, ax + aw, ay + ah);
 
         float maxX = this.left;
@@ -640,15 +655,16 @@ public class ProfileStoriesView extends View implements NotificationCenter.Notif
                         canvas.scale(bounceScale, bounceScale, rect2.centerX(), rect2.centerY());
                     }
 
+                    float avatarAlpha = avatarContainer.getAlpha();
                     if (read < 1) {
                         unreadPaint = gradientTools.getPaint(rect2);
-                        unreadPaint.setAlpha((int) (0xFF * (1f - read) * segmentsAlpha));
+                        unreadPaint.setAlpha((int) (0xFF * (1f - read) * segmentsAlpha * avatarAlpha));
                         unreadPaint.setStrokeWidth(dpf2(2.33f));
                         drawArc(canvas, rect2, a, -widthAngle * appear, false, unreadPaint);
                     }
 
                     if (read > 0) {
-                        readPaint.setAlpha((int) (readPaintAlpha * read * segmentsAlpha));
+                        readPaint.setAlpha((int) (readPaintAlpha * read * segmentsAlpha * avatarAlpha));
                         readPaint.setStrokeWidth(dpf2(1.5f));
                         drawArc(canvas, rect3, a, -widthAngle * appear, false, readPaint);
                     }

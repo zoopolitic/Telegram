@@ -1,13 +1,15 @@
 package org.telegram.ui.Stars;
 
-import static org.telegram.messenger.AndroidUtilities.dp;
-import static org.telegram.messenger.AndroidUtilities.dpf2;
-
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.view.View;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.CubicBezierInterpolator;
+
+import static org.telegram.messenger.AndroidUtilities.dp;
+import static org.telegram.messenger.AndroidUtilities.dpf2;
+import static org.telegram.messenger.AndroidUtilities.remapRange;
 
 public class StarGiftPatterns {
 
@@ -16,91 +18,93 @@ public class StarGiftPatterns {
     public static final int TYPE_GIFT = 2;
     public static final int TYPE_LINK_PREVIEW = 3;
 
-    private static final float[][] patternLocations = new float[][] {
-        {
-            83.33f, 24, 27.33f, .22f,
-            68.66f, 75.33f, 25.33f, .21f,
-            0, 86, 25.33f, .12f,
-            -68.66f, 75.33f, 25.33f, .21f,
-            -82.66f, 13.66f, 27.33f, .22f,
-            -80, -33.33f, 20, .24f,
-            -46.5f, -63.16f, 27, .21f,
-            1, -82.66f, 20, .15f,
-            46.5f, -63.16f, 27, .21f,
-            80, -33.33f, 19.33f, .24f,
+    private static final float[][] patternLocations = new float[][]{
+            {
+                    83.33f, 24, 27.33f, .22f,
+                    68.66f, 75.33f, 25.33f, .21f,
+                    0, 86, 25.33f, .12f,
+                    -68.66f, 75.33f, 25.33f, .21f,
+                    -82.66f, 13.66f, 27.33f, .22f,
+                    -80, -33.33f, 20, .24f,
+                    -46.5f, -63.16f, 27, .21f,
+                    1, -82.66f, 20, .15f,
+                    46.5f, -63.16f, 27, .21f,
+                    80, -33.33f, 19.33f, .24f,
 
-            115.66f, -63, 20, .15f,
-            134, -10.66f, 20, .18f,
-            118.66f, 55.66f, 20, .15f,
-            124.33f, 98.33f, 20, .11f,
+                    115.66f, -63, 20, .15f,
+                    134, -10.66f, 20, .18f,
+                    118.66f, 55.66f, 20, .15f,
+                    124.33f, 98.33f, 20, .11f,
 
-            -128, 98.33f, 20, .11f,
-            -108, 55.66f, 20, .15f,
-            -123.33f, -10.66f, 20, .18f,
-            -116, -63.33f, 20, .15f
-        },
-        {
-            27.33f, -57.66f, 20, .12f,
-            59, -32, 19.33f, .22f,
-            77, 4.33f, 22.66f, .2f,
-            100, 40.33f, 18, .12f,
-            58.66f, 59, 20, .18f,
-            73.33f, 100.33f, 22.66f, .15f,
-            75, 155, 22, .11f,
+                    -128, 98.33f, 20, .11f,
+                    -108, 55.66f, 20, .15f,
+                    -123.33f, -10.66f, 20, .18f,
+                    -116, -63.33f, 20, .15f
+            },
+            {
+                    27.33f, -57.66f, 20, .12f,
+                    59, -32, 19.33f, .22f,
+                    77, 4.33f, 22.66f, .2f,
+                    100, 40.33f, 18, .12f,
+                    58.66f, 59, 20, .18f,
+                    73.33f, 100.33f, 22.66f, .15f,
+                    75, 155, 22, .11f,
 
-            -27.33f, -57.33f, 20, .12f,
-            -59, -32.33f, 19.33f, .2f,
-            -77, 4.66f, 23.33f, .2f,
-            -98.66f, 41, 18.66f, .12f,
-            -58, 59.33f, 19.33f, .18f,
-            -73.33f, 100, 22, .15f,
-            -75.66f, 155, 22, .11f
-        },
-        {
-            -0.83f, -52.16f, 12.33f, .2f,
-            26.66f, -40.33f, 16, .2f,
-            44.16f, -20.5f, 12.33f, .2f,
-            53, 7.33f, 16, .2f,
-            31, 23.66f, 14.66f, .2f,
-            0, 32, 13.33f, .2f,
-            -29, 23.66f, 14, .2f,
-            -53, 7.33f, 16, .2f,
-            -44.5f, -20.16f, 12.33f, .2f,
-            -27.33f, -40.33f, 16, .2f,
-            43.66f, 50, 14.66f, .2f,
-            -41.66f, 48, 14.66f, .2f
-        },
-        {
-            -0.16f, -103.5f, 20.33f, .15f,
-            39.66f, -77.33f, 26.66f, .15f,
-            70.66f, -46.33f, 21.33f, .15f,
-            84.5f, -3.83f, 29.66f, .15f,
-            65.33f, 56.33f, 24.66f, .15f,
-            0, 67.66f, 24.66f, .15f,
-            -65.66f, 56.66f, 24.66f, .15f,
-            -85, -4, 29.33f, .15f,
-            -70.66f, -46.33f, 21.33f, .15f,
-            -40.33f, -77.66f, 26.66f, .15f,
+                    -27.33f, -57.33f, 20, .12f,
+                    -59, -32.33f, 19.33f, .2f,
+                    -77, 4.66f, 23.33f, .2f,
+                    -98.66f, 41, 18.66f, .12f,
+                    -58, 59.33f, 19.33f, .18f,
+                    -73.33f, 100, 22, .15f,
+                    -75.66f, 155, 22, .11f
+            },
+            {
+                    -0.83f, -52.16f, 12.33f, .2f,
+                    26.66f, -40.33f, 16, .2f,
+                    44.16f, -20.5f, 12.33f, .2f,
+                    53, 7.33f, 16, .2f,
+                    31, 23.66f, 14.66f, .2f,
+                    0, 32, 13.33f, .2f,
+                    -29, 23.66f, 14, .2f,
+                    -53, 7.33f, 16, .2f,
+                    -44.5f, -20.16f, 12.33f, .2f,
+                    -27.33f, -40.33f, 16, .2f,
+                    43.66f, 50, 14.66f, .2f,
+                    -41.66f, 48, 14.66f, .2f
+            },
+            {
+                    -0.16f, -103.5f, 20.33f, .15f,
+                    39.66f, -77.33f, 26.66f, .15f,
+                    70.66f, -46.33f, 21.33f, .15f,
+                    84.5f, -3.83f, 29.66f, .15f,
+                    65.33f, 56.33f, 24.66f, .15f,
+                    0, 67.66f, 24.66f, .15f,
+                    -65.66f, 56.66f, 24.66f, .15f,
+                    -85, -4, 29.33f, .15f,
+                    -70.66f, -46.33f, 21.33f, .15f,
+                    -40.33f, -77.66f, 26.66f, .15f,
 
-            62.66f, -109.66f, 21.33f, .11f,
-            103.166f, -67.5f, 20.33f, .11f,
-            110.33f, 37.66f, 20.66f, .11f,
-            94.166f, 91.16f, 20.33f, .11f,
-            38.83f, 91.16f, 20.33f, .11f,
-            0, 112.5f, 20.33f, .11f,
-            -38.83f, 91.16f, 20.33f, .11f,
-            -94.166f, 91.16f, 20.33f, .11f,
-            -110.33f, 37.66f, 20.66f, .11f,
-            -103.166f, -67.5f, 20.33f, .11f,
-            -62.66f, -109.66f, 21.33f, .11f
-        }
+                    62.66f, -109.66f, 21.33f, .11f,
+                    103.166f, -67.5f, 20.33f, .11f,
+                    110.33f, 37.66f, 20.66f, .11f,
+                    94.166f, 91.16f, 20.33f, .11f,
+                    38.83f, 91.16f, 20.33f, .11f,
+                    0, 112.5f, 20.33f, .11f,
+                    -38.83f, 91.16f, 20.33f, .11f,
+                    -94.166f, 91.16f, 20.33f, .11f,
+                    -110.33f, 37.66f, 20.66f, .11f,
+                    -103.166f, -67.5f, 20.33f, .11f,
+                    -62.66f, -109.66f, 21.33f, .11f
+            }
     };
 
-    public static void drawPattern(Canvas canvas, Drawable pattern, float w, float h, float alpha, float scale) {
+    public static void drawPattern(Canvas canvas, Drawable pattern, float w, float h, float alpha,
+                                   float scale) {
         drawPattern(canvas, TYPE_DEFAULT, pattern, w, h, alpha, scale);
     }
 
-    public static void drawPattern(Canvas canvas, int type, Drawable pattern, float w, float h, float alpha, float scale) {
+    public static void drawPattern(Canvas canvas, int type, Drawable pattern, float w, float h,
+                                   float alpha, float scale) {
         if (alpha <= 0.0f) return;
         for (int i = 0; i < patternLocations[type].length; i += 4) {
             final float x = patternLocations[type][i];
@@ -123,30 +127,122 @@ public class StarGiftPatterns {
         }
     }
 
-    private static final float[] profileRight = new float[] {
-        -35.66f, -5, 24, .2388f,
-        -14.33f, -29.33f, 20.66f, .32f,
-        -15, -73.66f, 19.33f, .32f,
-        -2, -99.66f, 18, .1476f,
-        -64.33f, -24.66f, 23.33f, .3235f,
-        -40.66f, -53.33f, 24, .3654f,
-        -50.33f, -85.66f, 20, .172f,
-        -96, -1.33f, 19.33f, .3343f,
-        -136.66f, -13, 18.66f, .2569f,
-        -104.66f, -33.66f, 20.66f, .2216f,
-        -82, -62.33f, 22.66f, .2562f,
-        -131.66f, -60, 18, .1316f,
-        -105.66f, -88.33f, 18, .1487f
+    private static final float[] profileRight = new float[]{
+            -35.66f, -5, 24, .2388f,
+            -14.33f, -29.33f, 20.66f, .32f,
+            -15, -73.66f, 19.33f, .32f,
+            -2, -99.66f, 18, .1476f,
+            -64.33f, -24.66f, 23.33f, .3235f,
+            -40.66f, -53.33f, 24, .3654f,
+            -50.33f, -85.66f, 20, .172f,
+            -96, -1.33f, 19.33f, .3343f,
+            -136.66f, -13, 18.66f, .2569f,
+            -104.66f, -33.66f, 20.66f, .2216f,
+            -82, -62.33f, 22.66f, .2562f,
+            -131.66f, -60, 18, .1316f,
+            -105.66f, -88.33f, 18, .1487f
     };
-    private static final float[] profileLeft = new float[] {
-        0, -107.33f, 16, .1505f,
-        14.33f, -84, 18, .1988f,
-        0, -50.66f, 18.66f, .3225f,
-        13, -15, 18.66f, .37f,
-        43.33f, 1, 18.66f, .3186f
+    private static final float[] profileLeft = new float[]{
+            0, -107.33f, 16, .1505f,
+            14.33f, -84, 18, .1988f,
+            0, -50.66f, 18.66f, .3225f,
+            13, -15, 18.66f, .37f,
+            43.33f, 1, 18.66f, .3186f
     };
 
-    public static void drawProfilePattern(Canvas canvas, Drawable pattern, float w, float h, float alpha, float full) {
+    public static void drawProfilePattern(Canvas canvas, Drawable pattern, float collapseProgress,
+                                          View avatarContainer) {
+        if (collapseProgress <= 0.0f) return;
+
+        final float ax = avatarContainer.getX();
+        final float ay = avatarContainer.getY();
+
+        final float scaleX = avatarContainer.getScaleX();
+        final float scaleY = avatarContainer.getScaleY();
+
+        final float pivotX = avatarContainer.getPivotX();
+        final float pivotY = avatarContainer.getPivotY();
+
+        final float aw = avatarContainer.getWidth();
+        final float ah = avatarContainer.getHeight();
+
+        final float scaledX = ax + (1 - scaleX) * pivotX;
+        final float scaledY = ay + (1 - scaleY) * pivotY;
+        final float acx = scaledX + aw * scaleX / 2f;
+        final float acy = scaledY + ah * scaleY / 2f;
+        final float awScaled = aw * scaleX;
+        final float ahScaled = ah * scaleY;
+
+        float expandedSize;
+        float expandedAlpha;
+
+        final float collapsedRadius = 0;
+        float expandedRadiusRadiusX;
+        float expandedRadiusRadiusY;
+        final float collapsedAlpha = 0f;
+        final float collapsedSize = dp(20);
+        final float nonceRange = 0.25f;
+        final int totalItems = 18;
+        final int innerCircleItems = 8;
+        final int outerCircleItems = 10;
+        for (int i = 0; i < totalItems; i++) {
+            float angle;
+            float offsetExpandedRadiusX;
+            float offsetExpandedRadiusY;
+            float delayed;
+            // inner circle
+            if (i < innerCircleItems) {
+                expandedSize = dp(28);
+                expandedAlpha = 0.32f;
+                angle = i * (360 / 8f);
+                expandedRadiusRadiusX = awScaled / 2f * 1.25f;
+                expandedRadiusRadiusY = ahScaled / 2f * 0.6f;
+                offsetExpandedRadiusX = expandedRadiusRadiusX + dp(26);
+                offsetExpandedRadiusY = expandedRadiusRadiusY + dp(42);
+                float nonce = i * (nonceRange / totalItems);
+                if (i % 2 == 1) {
+                    delayed = remapRange(collapseProgress, 0.9f + nonce, 0.6f + nonce);
+                } else {
+                    delayed = remapRange(collapseProgress, 0.7f + nonce, 0.4f + nonce);
+                }
+            } else { // outer circle
+                expandedSize = dp(26);
+                expandedAlpha = 0.15f;
+                expandedRadiusRadiusX = awScaled / 2f * 1.6f;
+                expandedRadiusRadiusY = ahScaled / 2f * 0.7f;
+                angle = 72 + i * (360 / 10f); // offset by 68 degrees
+                offsetExpandedRadiusX = expandedRadiusRadiusX + dp(60);
+                offsetExpandedRadiusY = expandedRadiusRadiusY + dp(80);
+                float nonce = i * (nonceRange / totalItems);
+                if (i % 2 == 1) {
+                    delayed = remapRange(collapseProgress, 0.75f + nonce, 0.4f + nonce);
+                } else {
+                    delayed = remapRange(collapseProgress, 0.6f + nonce, 0.3f + nonce);
+                }
+            }
+            final float interpolated = CubicBezierInterpolator.DEFAULT.getInterpolation(delayed);
+            final float radiusX = AndroidUtilities.lerp(collapsedRadius, offsetExpandedRadiusX, interpolated);
+            final float radiusY = AndroidUtilities.lerp(collapsedRadius, offsetExpandedRadiusY, interpolated);
+            final float shiftX = 0;
+            final float shiftY = 0;
+            float cx = (float) (acx + radiusX * Math.cos(angle / 180.0f * Math.PI)) + shiftX;
+            float cy = (float) (acy + radiusY * Math.sin(angle / 180.0f * Math.PI)) + shiftY;
+            float size = AndroidUtilities.lerp(collapsedSize, expandedSize, interpolated);
+            pattern.setBounds(
+                    (int) (cx - size / 2f),
+                    (int) (cy - size / 2f),
+                    (int) (cx + size / 2f),
+                    (int) (cy + size / 2f)
+            );
+            float alpha = AndroidUtilities.lerp(collapsedAlpha, expandedAlpha, interpolated);
+            pattern.setAlpha((int) (255 * alpha));
+            pattern.draw(canvas);
+        }
+    }
+
+
+    public static void drawProfilePattern(Canvas canvas, Drawable pattern, float w, float h,
+                                          float alpha, float full) {
         if (alpha <= 0.0f) return;
 
         final float b = h;
@@ -160,10 +256,10 @@ public class StarGiftPatterns {
                 final float thisAlpha = profileLeft[i + 3];
 
                 pattern.setBounds(
-                    (int) (l + dpf2(x) - dpf2(size) / 2.0f),
-                    (int) (b + dpf2(y) - dpf2(size) / 2.0f),
-                    (int) (l + dpf2(x) + dpf2(size) / 2.0f),
-                    (int) (b + dpf2(y) + dpf2(size) / 2.0f)
+                        (int) (l + dpf2(x) - dpf2(size) / 2.0f),
+                        (int) (b + dpf2(y) - dpf2(size) / 2.0f),
+                        (int) (l + dpf2(x) + dpf2(size) / 2.0f),
+                        (int) (b + dpf2(y) + dpf2(size) / 2.0f)
                 );
                 pattern.setAlpha((int) (0xFF * alpha * thisAlpha * full));
                 pattern.draw(canvas);
@@ -182,10 +278,10 @@ public class StarGiftPatterns {
                 final float thisAlpha = .21f;
 
                 pattern.setBounds(
-                    (int) (l + dpf2(x) - dpf2(size) / 2.0f),
-                    (int) (b + dpf2(y) - dpf2(size) / 2.0f),
-                    (int) (l + dpf2(x) + dpf2(size) / 2.0f),
-                    (int) (b + dpf2(y) + dpf2(size) / 2.0f)
+                        (int) (l + dpf2(x) - dpf2(size) / 2.0f),
+                        (int) (b + dpf2(y) - dpf2(size) / 2.0f),
+                        (int) (l + dpf2(x) + dpf2(size) / 2.0f),
+                        (int) (b + dpf2(y) + dpf2(size) / 2.0f)
                 );
                 pattern.setAlpha((int) (0xFF * alpha * thisAlpha * full));
                 pattern.draw(canvas);
@@ -199,10 +295,10 @@ public class StarGiftPatterns {
             final float thisAlpha = profileRight[i + 3];
 
             pattern.setBounds(
-                (int) (r + dpf2(x) - dpf2(size) / 2.0f),
-                (int) (b + dpf2(y) - dpf2(size) / 2.0f),
-                (int) (r + dpf2(x) + dpf2(size) / 2.0f),
-                (int) (b + dpf2(y) + dpf2(size) / 2.0f)
+                    (int) (r + dpf2(x) - dpf2(size) / 2.0f),
+                    (int) (b + dpf2(y) - dpf2(size) / 2.0f),
+                    (int) (r + dpf2(x) + dpf2(size) / 2.0f),
+                    (int) (b + dpf2(y) + dpf2(size) / 2.0f)
             );
             pattern.setAlpha((int) (0xFF * alpha * thisAlpha));
             pattern.draw(canvas);
